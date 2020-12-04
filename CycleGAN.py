@@ -21,17 +21,17 @@ print(os.listdir("webtoon_face"))
 import matplotlib.pyplot as plt
 
 params = {
-    'batch_size': 1,
+    'batch_size': 2,
     'input_size': 256,
     'resize_scale': 286,
     'crop_size': 256,
     'fliplr': True,
     # model params
-    'num_epochs': 100,
-    'decay_epoch': 100,
-    'ngf': 32,  # number of generator filters
+    'num_epochs': 1,
+    'decay_epoch': 1,
+    'ngf': 64,  # number of generator filters
     'ndf': 64,  # number of discriminator filters
-    'num_resnet': 6,  # number of resnet blocks
+    'num_resnet': 5,  # number of resnet blocks
     'lrG': 0.0002,  # learning rate for generator
     'lrD': 0.0002,  # learning rate for discriminator
     'beta1': 0.5,  # beta1 for Adam optimizer
@@ -66,6 +66,33 @@ def plot_train_result(real_image, gen_image, recon_image, epoch, save=False, sho
     # save figure
     if save:
         save_fn = 'Result_epoch_{:d}'.format(epoch + 1) + '.png'
+        plt.savefig(save_fn)
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def final_plot_train_result(real_image, gen_image, recon_image, idx, save=False, show=True, fig_size=(15, 15)):
+    fig, axes = plt.subplots(2, 3, figsize=fig_size)
+    imgs = [to_np(real_image[0]), to_np(gen_image[0]), to_np(recon_image[0]),
+            to_np(real_image[1]), to_np(gen_image[1]), to_np(recon_image[1])]
+    for ax, img in zip(axes.flatten(), imgs):
+        ax.axis('off')
+        # ax.set_adjustable('box-forced')
+        # Scale to 0-255
+        img = img.squeeze()
+        img = (((img - img.min()) * 255) / (img.max() - img.min())).transpose(1, 2, 0).astype(np.uint8)
+        ax.imshow(img, cmap=None, aspect='equal')
+    plt.subplots_adjust(wspace=0, hspace=0)
+
+    title = 'index {0}'.format(idx + 1)
+    fig.text(0.5, 0.04, title, ha='center')
+
+    # save figure
+    if save:
+        save_fn = 'Final_Result_{:d}'.format(idx + 1) + '.png'
         plt.savefig(save_fn)
 
     if show:
@@ -314,6 +341,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Get specific test images
 test_real_A_data = train_data_A.__getitem__(11).unsqueeze(0)  # Convert to 4d tensor (BxNxHxW)
 test_real_B_data = train_data_B.__getitem__(91).unsqueeze(0)
+
+final_real_A_data = [train_data_A.__getitem__(i*3).unsqueeze(0) for i in range(200)]
+final_real_B_data = [train_data_B.__getitem__(i*20).unsqueeze(0) for i in range(200)]
+
 # print(test_real_A_data)
 # Build Model
 G_A = Generator(3, params['ngf'], 3, params['num_resnet']).cuda()  # input_dim, num_filter, output_dim, num_resnet
@@ -476,3 +507,19 @@ all_losses['G_B_avg_losses'] = G_B_avg_losses
 all_losses['cycle_A_avg_losses'] = cycle_A_avg_losses
 all_losses['cycle_B_avg_losses'] = cycle_B_avg_losses
 all_losses.to_csv('avg_losses', index=False)
+
+
+def save_images(idx):
+    final_real_A = final_real_A_data[idx].cuda()
+    final_fake_B = G_A(final_real_A)
+    final_recon_A = G_B(final_fake_B)
+
+    final_real_B = final_real_B_data[idx].cuda()
+    final_fake_A = G_B(final_real_B)
+    final_recon_B = G_A(final_fake_A)
+
+    final_plot_train_result([final_real_A, final_real_B], [final_fake_B, final_fake_A], [final_recon_A, final_recon_B],
+                      idx, save=True, show=False)
+for a in range(10):
+    for i in range(20):
+        save_images(i+a*20)
