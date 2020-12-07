@@ -27,8 +27,8 @@ params = {
     'crop_size': 256,
     'fliplr': True,
     # model params
-    'num_epochs': 1,
-    'decay_epoch': 1,
+    'num_epochs': 150,
+    'decay_epoch': 150,
     'ngf': 64,  # number of generator filters
     'ndf': 64,  # number of discriminator filters
     'num_resnet': 5,  # number of resnet blocks
@@ -497,7 +497,7 @@ for epoch in range(params['num_epochs']):
     test_recon_B = G_A(test_fake_A)
 
     plot_train_result([test_real_A, test_real_B], [test_fake_B, test_fake_A], [test_recon_A, test_recon_B],
-                      epoch, save=True)
+                      epoch, save=True, show=False)
 
 all_losses = pd.DataFrame()
 all_losses['D_A_avg_losses'] = D_A_avg_losses
